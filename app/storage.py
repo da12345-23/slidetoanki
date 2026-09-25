@@ -7,8 +7,6 @@ by the app at /store/...
 from __future__ import annotations
 
 import os
-import urllib.request
-import uuid
 from pathlib import Path
 from typing import Dict, List
 
@@ -27,13 +25,11 @@ class LocalStore:
         return (LOCAL_DIR / path).read_bytes()
 
     def list(self, prefix: str) -> List[Dict]:
-        base = LOCAL_DIR / prefix
-        if not base.exists():
-            return []
         items = []
-        for f in base.iterdir():
-            if f.is_file():
-                items.append({"path": prefix + f.name, "uploaded_at": f.stat().st_mtime})
+        for f in LOCAL_DIR.rglob("*"):
+            path = f.relative_to(LOCAL_DIR).as_posix()
+            if f.is_file() and path.startswith(prefix):
+                items.append({"path": path, "uploaded_at": f.stat().st_mtime})
         return items
 
 
@@ -44,16 +40,12 @@ class BlobStore:
 
     def put(self, path: str, data: bytes, content_type: str) -> str:
         result = self.client.put(path, data, access="public", content_type=content_type,
-                                 add_random_suffix=False, overwrite=True,
-                                 cache_control_max_age=60)
+                                 add_random_suffix=False, overwrite=True)
         return result.url
 
     def get(self, path: str) -> bytes:
-        # The SDK's no-cache flag (?cache=0) is rejected by public stores, so skip
-        # the CDN copy with a unique query instead: edits must show up right away.
-        url = self.client.head(path).url
-        with urllib.request.urlopen(f"{url}?v={uuid.uuid4().hex}", timeout=30) as res:
-            return res.read()
+        # Files are never overwritten (see main.py), so the CDN copy is always current.
+        return self.client.get(path, access="public").content
 
     def list(self, prefix: str) -> List[Dict]:
         items = []

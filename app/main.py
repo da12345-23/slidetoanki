@@ -9,6 +9,7 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import re
 import tempfile
 import time
 import uuid
@@ -60,24 +61,39 @@ def login():
 
 # ---------------------------------------------------------------- decks
 
-def _deck_path(deck_id: str) -> str:
+# Each save writes a new file, decks/<id>/<milliseconds>.json, and reads take the
+# newest one. Blob's CDN can keep serving an old copy of an overwritten file,
+# but file listings are never cached, so versioned files are always current.
+VERSION_RE = re.compile(r"^decks/([a-z0-9]+)/(\d{13})\.json$")
+
+
+def _check_id(deck_id: str) -> str:
     if not deck_id.isalnum():
         raise HTTPException(404, "Deck not found.")
-    return f"decks/{deck_id}.json"
+    return deck_id
+
+
+def _latest_versions(prefix: str) -> Dict[str, str]:
+    """Map each deck id under `prefix` to the path of its newest saved version."""
+    latest: Dict[str, str] = {}
+    for item in get_store().list(prefix):
+        m = VERSION_RE.match(item["path"])
+        if m and item["path"] > latest.get(m.group(1), ""):
+            latest[m.group(1)] = item["path"]
+    return latest
 
 
 def _load(deck_id: str) -> Dict:
-    try:
-        return json.loads(get_store().get(_deck_path(deck_id)))
-    except HTTPException:
-        raise
-    except Exception:
+    path = _latest_versions(f"decks/{_check_id(deck_id)}/").get(deck_id)
+    if not path:
         raise HTTPException(404, "That deck doesn't exist anymore.")
+    return json.loads(get_store().get(path))
 
 
 def _save(deck: Dict) -> None:
     deck["updated"] = time.time()
-    get_store().put(_deck_path(deck["id"]), json.dumps(deck).encode(), "application/json")
+    path = f"decks/{deck['id']}/{int(deck['updated'] * 1000):013d}.json"
+    get_store().put(path, json.dumps(deck).encode(), "application/json")
 
 
 class NewDeck(BaseModel):
@@ -111,7 +127,7 @@ def process_batch(
     For a PDF the browser sends just these pages; for a PPTX it sends the whole
     file and we pick slides first_slide..last_slide.
     """
-    _deck_path(deck_id)
+    _check_id(deck_id)
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in (".pdf", ".pptx"):
         raise HTTPException(400, "Upload a .pdf or .pptx file.")
@@ -184,11 +200,9 @@ def finish_deck(deck_id: str, req: FinishDeck):
 def list_decks():
     store = get_store()
     summaries = []
-    for item in sorted(store.list("decks/"), key=lambda i: -i["uploaded_at"])[:100]:
-        if not item["path"].endswith(".json"):
-            continue
+    for path in _latest_versions("decks/").values():
         try:
-            deck = json.loads(store.get(item["path"]))
+            deck = json.loads(store.get(path))
         except Exception:
             continue
         if deck.get("status") != "done":
@@ -230,7 +244,7 @@ class ExportRequest(BaseModel):
 
 @app.post("/api/decks/{deck_id}/export", dependencies=[Depends(check_password)])
 def export(deck_id: str, req: ExportRequest):
-    _deck_path(deck_id)
+    _check_id(deck_id)
     if not req.cards:
         raise HTTPException(400, "There are no cards to export.")
     store = get_store()
@@ -248,7 +262,9 @@ def export(deck_id: str, req: ExportRequest):
                         pass  # a missing image just leaves the card without it
         out = Path(tmp) / f"{deck_slug(name)}.apkg"
         build_apkg([c.model_dump() for c in req.cards], name, media_dir, out)
-        url = store.put(f"exports/{deck_id}/{out.name}", out.read_bytes(), "application/octet-stream")
+        # A new folder per export: an overwritten file could be served stale from the CDN.
+        url = store.put(f"exports/{deck_id}/{int(time.time() * 1000)}/{out.name}",
+                        out.read_bytes(), "application/octet-stream")
     return {"url": url, "filename": out.name}
 
 
