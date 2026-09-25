@@ -40,9 +40,10 @@ ON_VERCEL = bool(os.environ.get("VERCEL"))
 
 def check_password(x_password: Optional[str] = Header(default=None)) -> None:
     expected = os.environ.get("APP_PASSWORD", "")
-    if ON_VERCEL and not (expected and os.environ.get("ANTHROPIC_API_KEY")):
+    missing = [name for name in ("APP_PASSWORD", "ANTHROPIC_API_KEY") if not os.environ.get(name)]
+    if ON_VERCEL and missing:
         # Never run the hosted site open to everyone or on the offline mock.
-        raise HTTPException(503, "This site isn't set up yet: APP_PASSWORD and ANTHROPIC_API_KEY need to be added in Vercel.")
+        raise HTTPException(503, f"This site isn't set up yet. Add {' and '.join(missing)} in Vercel, then redeploy.")
     if expected and not hmac.compare_digest((x_password or "").encode(), expected.encode()):
         raise HTTPException(401, "Wrong password.")
 
