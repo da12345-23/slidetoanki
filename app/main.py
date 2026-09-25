@@ -237,6 +237,15 @@ def save_deck(deck_id: str, req: SaveDeck):
     return {"ok": True, "updated": deck["updated"]}
 
 
+@app.delete("/api/decks/{deck_id}", dependencies=[Depends(check_password)])
+def delete_deck(deck_id: str):
+    """Hide a deck from the library (saved as a new version, like every change)."""
+    deck = _load(deck_id)
+    deck["status"] = "deleted"
+    _save(deck)
+    return {"ok": True}
+
+
 class ExportRequest(BaseModel):
     deck_name: str
     cards: List[Card]
