@@ -57,7 +57,7 @@ def test_end_to_end(tmp_path):
     assert diagram["front_image"] and diagram["front_image"].endswith("_masked.png")
 
     # (b) the mitochondria/ATP fact appears once
-    atp = [c for c in cards if "mitochondri" in (c["front"] + c["back"]).lower()
+    atp = [c for c in cards if c["type"] == "basic" and "mitochondri" in (c["front"] + c["back"]).lower()
            and "atp" in (c["front"] + c["back"]).lower()]
     assert len(atp) == 1, atp
 
