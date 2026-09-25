@@ -2,292 +2,728 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Slide2Anki</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script>
+  // Apply a saved theme before first paint so there is no flash.
+  try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <style>
   :root {
-    --bg: #eef1f3;
-    --surface: #ffffff;
-    --ink: #1b2430;
-    --muted: #5d6a77;
-    --line: #d5dce2;
-    --accent: #0e7c74;
-    --accent-ink: #ffffff;
-    --rule: #d9534f;          /* the red line on an index card */
-    --ruled: #dbe7f3;         /* its faint blue lines */
-    --danger: #b3261e;
-    --warn-bg: #fff4d6;
-    --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-    --body: "Atkinson Hyperlegible", -apple-system, "Segoe UI", sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --bg: #FAFAF9;
+    --surface: #FFFFFF;
+    --surface-2: #F5F5F4;
+    --border: #E7E5E4;
+    --border-strong: #D6D3D1;
+    --text: #1C1917;
+    --text-2: #57534E;
+    --text-3: #78716C;
+    --accent: #6366F1;
+    --accent-hover: #4F46E5;
+    --accent-soft: #EEF2FF;
+    --accent-text: #4338CA;
+    --on-accent: #FFFFFF;
+    --danger: #DC2626;
+    --danger-soft: #FEF2F2;
+    --shadow-sm: 0 1px 2px rgba(28, 25, 23, .05);
+    --shadow: 0 1px 3px rgba(28, 25, 23, .06), 0 4px 12px rgba(28, 25, 23, .04);
+    --shadow-lg: 0 8px 30px rgba(28, 25, 23, .12);
+    --skeleton: #F0EFEE;
+    --skeleton-hi: #F8F8F7;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --ease: 180ms cubic-bezier(.2, .7, .3, 1);
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #14181d; --surface: #1d232a; --ink: #e7ebef; --muted: #9aa6b2; --line: #2e3740;
-      --accent: #3fb8ad; --accent-ink: #0c1a19; --rule: #e0716d; --ruled: #26313c;
-      --danger: #f2877f; --warn-bg: #3a3220; color-scheme: dark;
+      --bg: #111110; --surface: #1C1B1A; --surface-2: #252422; --border: #2E2C2A; --border-strong: #3F3C39;
+      --text: #F5F5F4; --text-2: #C4C0BC; --text-3: #A19C97;
+      --accent: #818CF8; --accent-hover: #A5B4FC; --accent-soft: #23234A; --accent-text: #C7D2FE; --on-accent: #111110;
+      --danger: #F87171; --danger-soft: #3A1D1D;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 1px 3px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.25);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,.5); --skeleton: #252422; --skeleton-hi: #2E2C2A;
+      color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #14181d; --surface: #1d232a; --ink: #e7ebef; --muted: #9aa6b2; --line: #2e3740;
-    --accent: #3fb8ad; --accent-ink: #0c1a19; --rule: #e0716d; --ruled: #26313c;
-    --danger: #f2877f; --warn-bg: #3a3220; color-scheme: dark;
+    --bg: #111110; --surface: #1C1B1A; --surface-2: #252422; --border: #2E2C2A; --border-strong: #3F3C39;
+    --text: #F5F5F4; --text-2: #C4C0BC; --text-3: #A19C97;
+    --accent: #818CF8; --accent-hover: #A5B4FC; --accent-soft: #23234A; --accent-text: #C7D2FE; --on-accent: #111110;
+    --danger: #F87171; --danger-soft: #3A1D1D;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 1px 3px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.25);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,.5); --skeleton: #252422; --skeleton-hi: #2E2C2A;
+    color-scheme: dark;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body); }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 96px; display: grid; gap: 28px; }
-  h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
-  h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; letter-spacing: -0.02em; }
-  h1 span { color: var(--accent); }
-  .lede { color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
-  button, .btn { font: 700 15px var(--body); border-radius: 8px; border: 1px solid var(--line);
-    background: var(--surface); color: var(--ink); padding: 8px 14px; cursor: pointer; }
-  button:hover { border-color: var(--accent); }
-  button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-visible, .drop:focus-visible {
-    outline: 3px solid var(--accent); outline-offset: 2px; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  button.link { border: none; background: none; padding: 4px 6px; color: var(--muted); font-weight: 400; }
-  button.link:hover { color: var(--danger); }
-  button:disabled { opacity: .5; cursor: not-allowed; }
 
-  .drop { border: 2px dashed var(--line); border-radius: 14px; background: var(--surface);
-    padding: 40px 20px; text-align: center; cursor: pointer; display: grid; gap: 8px; justify-items: center; }
-  .drop.over { border-color: var(--accent); }
-  .drop strong { font-family: var(--display); font-size: 22px; }
-  .drop small { color: var(--muted); }
-  .status { display: flex; gap: 12px; align-items: center; color: var(--muted); }
-  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--line);
-    border-top-color: var(--accent); animation: spin 0.9s linear infinite; }
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--font);
+    -webkit-font-smoothing: antialiased; transition: background var(--ease), color var(--ease); }
+  h1, h2, h3, p { margin: 0; }
+  h1, h2, h3 { text-wrap: balance; letter-spacing: -0.015em; }
+  svg.lucide { width: 18px; height: 18px; stroke-width: 1.9; flex: none; }
+  img { max-width: 100%; }
+
+  .container { width: 100%; max-width: 880px; margin: 0 auto; padding-inline: 20px; }
+
+  /* ---------- buttons & inputs */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font: 500 14px/1 var(--font); height: 38px; padding: 0 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer;
+    transition: background var(--ease), border-color var(--ease), color var(--ease), box-shadow var(--ease), transform var(--ease);
+    box-shadow: var(--shadow-sm); white-space: nowrap; }
+  .btn:hover { border-color: var(--border-strong); background: var(--surface-2); }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn-lg { height: 48px; padding: 0 22px; font-size: 15px; font-weight: 600; border-radius: 12px; }
+  .btn-ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--text-2); }
+  .btn-ghost:hover { background: var(--surface-2); border-color: transparent; color: var(--text); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .icon-btn { width: 34px; height: 34px; padding: 0; }
+  .icon-btn.danger:hover { color: var(--danger); background: var(--danger-soft); }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .btn:focus-visible, .field:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); border-color: var(--accent); }
+
+  .field, textarea, select { font: 15px/1.5 var(--font); color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color var(--ease), box-shadow var(--ease); }
+  .field { height: 44px; padding: 0 14px; width: 100%; }
+  .field:hover, textarea:hover, select:hover { border-color: var(--border-strong); }
+  textarea { width: 100%; padding: 10px 12px; resize: vertical; min-height: 84px; }
+  select { height: 36px; padding: 0 10px; font-size: 13px; max-width: 100%; }
+  label.label { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
+
+  /* ---------- header */
+  .app-header { border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px); }
+  .app-header .container { height: 60px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; letter-spacing: -0.01em;
+    color: var(--text); text-decoration: none; background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--font); }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: var(--on-accent);
+    display: grid; place-items: center; box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .logo svg.lucide { width: 16px; height: 16px; stroke-width: 2.2; }
+
+  main { padding-block: 48px 140px; }
+
+  /* ---------- upload */
+  .hero { text-align: center; display: grid; gap: 10px; margin-bottom: 32px; }
+  .hero h1 { font-size: clamp(28px, 5vw, 36px); font-weight: 700; letter-spacing: -0.025em; }
+  .hero p { color: var(--text-2); font-size: 16px; max-width: 52ch; margin-inline: auto; }
+  .upload-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    box-shadow: var(--shadow); padding: 24px; display: grid; gap: 20px; max-width: 640px; margin-inline: auto; }
+  .drop { display: grid; justify-items: center; gap: 10px; padding: 48px 20px; text-align: center; cursor: pointer;
+    border: 1.5px dashed var(--border-strong); border-radius: var(--radius); background: var(--surface-2);
+    transition: border-color var(--ease), background var(--ease), transform var(--ease); }
+  .drop:hover { border-color: var(--accent); }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.01); }
+  .drop-icon { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center;
+    background: var(--surface); border: 1px solid var(--border); color: var(--accent); box-shadow: var(--shadow-sm); margin-bottom: 4px; }
+  .drop-icon svg.lucide { width: 24px; height: 24px; }
+  .drop strong { font-size: 17px; font-weight: 600; }
+  .drop span { color: var(--text-3); font-size: 14px; }
+  .file-row { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+  .file-badge { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text);
+    display: grid; place-items: center; flex: none; }
+  .file-meta { min-width: 0; flex: 1; }
+  .file-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-size { font-size: 13px; color: var(--text-3); }
+  .upload-card .btn-lg { width: 100%; }
+  .hints { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin-top: 24px; color: var(--text-3); font-size: 13px; }
+  .hints span { display: inline-flex; align-items: center; gap: 6px; }
+  .hints svg.lucide { width: 15px; height: 15px; color: var(--accent); }
+
+  /* ---------- alert */
+  .alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--radius-sm);
+    background: var(--danger-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+    max-width: 640px; margin: 0 auto 20px; }
+  .alert svg.lucide { color: var(--danger); margin-top: 2px; }
+  .alert strong { display: block; font-weight: 600; }
+  .alert p { color: var(--text-2); font-size: 14px; }
+
+  /* ---------- loading */
+  .progress-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow);
+    padding: 24px; display: grid; gap: 14px; }
+  .progress-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .progress-top h2 { font-size: 18px; font-weight: 600; }
+  .progress-pct { font-variant-numeric: tabular-nums; color: var(--text-3); font-size: 14px; }
+  .bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--border); }
+  .bar > div { height: 100%; width: 4%; border-radius: inherit; background: var(--accent); transition: width 600ms cubic-bezier(.2,.7,.3,1); }
+  .status-line { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 14px; }
+  .status-line svg.lucide { width: 16px; height: 16px; color: var(--accent); animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
-  .error { background: var(--warn-bg); border-radius: 10px; padding: 12px 16px; color: var(--ink); }
+  .skeletons { display: grid; gap: 14px; margin-top: 28px; }
+  .sk-head { height: 14px; width: 90px; margin: 8px 0 2px; }
+  .sk { border-radius: 6px; background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-hi) 50%, var(--skeleton) 75%);
+    background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .sk-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .sk-col { display: grid; gap: 10px; align-content: start; }
+  .sk-col .sk:nth-child(1) { height: 10px; width: 44px; }
+  .sk-col .sk:nth-child(2) { height: 14px; width: 92%; }
+  .sk-col .sk:nth-child(3) { height: 14px; width: 64%; }
 
-  .toolbar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0;
-    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
-    border-bottom: 1px solid var(--line); }
-  .summary { font-family: var(--display); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .deckname { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .deckname label { color: var(--muted); font-size: 14px; }
-  input[type=text] { font: 15px var(--body); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
-    background: var(--surface); color: var(--ink); min-width: 0; width: 220px; max-width: 100%; }
+  /* ---------- review */
+  .review-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  .review-head h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .review-head p { color: var(--text-3); font-size: 14px; }
+  .deck-field { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .deck-field > div { width: 240px; max-width: 100%; }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 36px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px;
+    box-shadow: var(--shadow-sm); display: flex; gap: 14px; align-items: center; min-width: 0; }
+  .stat-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex: none;
+    background: var(--accent-soft); color: var(--accent-text); }
+  .stat-num { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .stat-label { font-size: 13px; color: var(--text-3); line-height: 1.3; }
 
-  .slide { display: grid; gap: 12px; }
-  .slide-head { display: flex; align-items: baseline; gap: 12px; }
-  .slide-head h2 { font-size: 20px; }
-  .slide-head .tag { font: 12px var(--mono); color: var(--muted); }
-  .slide-head button { margin-left: auto; }
+  .group { margin-bottom: 28px; }
+  .group-head { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 4; display: flex; align-items: center; gap: 10px;
+    padding: 12px 0 10px; background: var(--bg); }
+  .group-head h2 { font-size: 15px; font-weight: 600; }
+  .group-head .count { font-size: 12px; color: var(--text-3); background: var(--surface-2); border: 1px solid var(--border);
+    padding: 1px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+  .group-head .tag { margin-left: auto; font-size: 12px; color: var(--text-3); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .group-body { display: grid; gap: 12px; }
 
-  /* Each card looks like a ruled index card: red top rule, faint blue lines. */
-  .card { background: var(--surface); border-radius: 6px; border: 1px solid var(--line);
-    border-top: 3px solid var(--rule); padding: 14px 16px; display: grid; gap: 10px;
-    grid-template-columns: 1fr 1fr; }
-  .card.diagram { border-top-color: var(--accent); }
-  .side { display: grid; gap: 6px; align-content: start; }
-  .side-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-  textarea { font: 16px/1.6 var(--body); color: var(--ink); width: 100%; resize: vertical; min-height: 64px;
-    padding: 6px 8px; border: 1px solid transparent; border-radius: 6px;
-    background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(1.6em - 1px), var(--ruled) calc(1.6em - 1px), var(--ruled) 1.6em);
-    background-position: 0 6px; }
-  textarea:hover { border-color: var(--line); }
-  .thumb { max-width: 100%; max-height: 180px; border-radius: 6px; border: 1px solid var(--line); justify-self: start; background: #fff; }
-  select { font: 13px var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
-    border-radius: 6px; padding: 4px 6px; max-width: 100%; }
-  .card-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .pill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); }
-  .pill.diagram { color: var(--accent); }
-  .empty { color: var(--muted); font-style: italic; margin: 0; }
+  .card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow-sm); transition: box-shadow var(--ease), border-color var(--ease), opacity var(--ease); }
+  .card:hover { box-shadow: var(--shadow); border-color: var(--border-strong); }
+  .card.editing { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .face { padding: 18px 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .face + .face { border-left: 1px solid var(--border); }
+  .face-label { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-3); min-height: 22px; }
+  .face-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+  .face-text.muted { color: var(--text-3); font-style: italic; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0;
+    text-transform: none; color: var(--accent-text); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
+  .badge svg.lucide { width: 12px; height: 12px; }
+  .thumb { display: block; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;
+    cursor: zoom-in; width: fit-content; max-width: 100%; transition: box-shadow var(--ease), transform var(--ease); margin-top: 4px; }
+  .thumb:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+  .thumb img { display: block; max-height: 180px; width: auto; max-width: 100%; }
+  .card-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; padding: 2px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-sm);
+    opacity: 0; transform: translateY(-2px); transition: opacity var(--ease), transform var(--ease); }
+  .card:hover .card-actions, .card:focus-within .card-actions { opacity: 1; transform: none; }
+  @media (hover: none) { .card-actions { opacity: 1; transform: none; } }
+  .card-actions .btn { width: 30px; height: 30px; border-radius: 8px; }
+  .card-actions svg.lucide { width: 16px; height: 16px; }
+  .edit-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .img-pick { display: grid; gap: 6px; }
 
-  details.removed { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
-  details.removed summary { cursor: pointer; font-weight: 700; }
-  .removed-row { display: flex; gap: 12px; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
-  .removed-row p { margin: 0; }
-  .removed-row small { color: var(--muted); }
+  .empty-row { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border: 1px dashed var(--border);
+    border-radius: var(--radius); color: var(--text-3); font-size: 14px; }
+  .empty-row svg.lucide { width: 16px; height: 16px; }
+  .add-btn { justify-self: start; }
 
-  @media (max-width: 640px) { .card { grid-template-columns: 1fr; } }
+  .dupes { margin-top: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .dupes summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-weight: 500; }
+  .dupes summary::-webkit-details-marker { display: none; }
+  .dupes summary .chev { margin-left: auto; color: var(--text-3); transition: transform var(--ease); }
+  .dupes[open] summary .chev { transform: rotate(180deg); }
+  .dupe { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--border); }
+  .dupe p { min-width: 0; }
+  .dupe small { display: block; color: var(--text-3); font-size: 13px; }
+
+  /* ---------- floating export, toast, lightbox */
+  .fab { position: fixed; right: 24px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+    box-shadow: var(--shadow-lg), 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .toasts { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    z-index: 30; display: grid; gap: 8px; justify-items: center; width: max-content; max-width: calc(100vw - 32px); pointer-events: none; }
+  .toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px;
+    border-radius: 12px; background: var(--text); color: var(--bg); box-shadow: var(--shadow-lg); font-size: 14px;
+    animation: toast-in 200ms ease-out; }
+  .toast svg.lucide { width: 16px; height: 16px; }
+  .toast button { font: 600 14px var(--font); color: var(--bg); background: color-mix(in srgb, var(--bg) 16%, transparent);
+    border: 0; border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+  .toast button:hover { background: color-mix(in srgb, var(--bg) 26%, transparent); }
+  .toast.leaving { opacity: 0; transform: translateY(6px); transition: opacity 180ms, transform 180ms; }
+  @keyframes toast-in { from { transform: translateY(12px) scale(.97); } }
+
+  .lightbox { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px;
+    background: rgba(12, 10, 9, .78); backdrop-filter: blur(4px); cursor: zoom-out; }
+  .lightbox img { max-width: min(1100px, 100%); max-height: calc(100vh - 96px); border-radius: 12px; background: #fff; box-shadow: var(--shadow-lg); }
+  .lightbox .close { position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; background: rgba(255,255,255,.12);
+    color: #fff; border-color: transparent; box-shadow: none; }
+  .lightbox .close:hover { background: rgba(255,255,255,.22); }
+  @keyframes fade { from { opacity: 0; } }
+
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+  }
+
+  @media (max-width: 640px) {
+    main { padding-block: 28px 120px; }
+    .container { padding-inline: 16px; }
+    .upload-card { padding: 16px; }
+    .drop { padding: 36px 16px; }
+    .stats { gap: 8px; }
+    .stat { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+    .stat-num { font-size: 20px; }
+    .card-grid, .sk-card { grid-template-columns: 1fr; }
+    .face + .face { border-left: 0; border-top: 1px solid var(--border); }
+    .sk-card { gap: 16px; }
+    .group-head .tag { display: none; }
+    .fab { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+    .toasts { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+    .deck-field, .deck-field > div { width: 100%; }
+    .deck-field .btn { flex: 1; }
+  }
 </style>
 </head>
 <body>
-<main class="wrap">
-  <header>
-    <h1>Slide<span>2</span>Anki</h1>
-    <p class="lede">Upload lecture slides. You'll get flashcards in slide order, with diagrams attached, one card per labeled diagram, and repeated facts removed.</p>
-  </header>
+<header class="app-header">
+  <div class="container">
+    <button class="brand" id="home" type="button" aria-label="Slide2Anki, start over">
+      <span class="logo"><i data-lucide="layers"></i></span>
+      Slide2Anki
+    </button>
+    <button class="btn btn-ghost icon-btn" id="theme" type="button" aria-label="Switch to dark mode" title="Toggle dark mode">
+      <i data-lucide="moon"></i>
+    </button>
+  </div>
+</header>
 
-  <section id="upload">
-    <label class="drop" id="drop" tabindex="0">
-      <strong>Drop a PDF or PowerPoint here</strong>
-      <small>or click to choose a file (.pdf, .pptx)</small>
-      <input id="file" type="file" accept=".pdf,.pptx" hidden>
-    </label>
+<main class="container">
+  <div class="alert" id="error" role="alert" hidden>
+    <i data-lucide="circle-alert"></i>
+    <div><strong id="error-title"></strong><p id="error-text"></p></div>
+  </div>
+
+  <!-- Upload -->
+  <section class="view" id="view-upload">
+    <div class="hero">
+      <h1>Turn slides into flashcards</h1>
+      <p>Upload a lecture deck and get Anki cards in slide order, with diagrams included and repeats removed.</p>
+    </div>
+    <div class="upload-card">
+      <label class="drop" id="drop" tabindex="0">
+        <span class="drop-icon"><i data-lucide="upload"></i></span>
+        <strong>Drop your slides here</strong>
+        <span>PDF or PPTX · or click to browse</span>
+        <input id="file" type="file" accept=".pdf,.pptx" hidden>
+      </label>
+      <div class="file-row" id="file-row" hidden>
+        <span class="file-badge"><i data-lucide="file-text"></i></span>
+        <div class="file-meta">
+          <div class="file-name" id="file-name"></div>
+          <div class="file-size" id="file-size"></div>
+        </div>
+        <button class="btn btn-ghost icon-btn" id="file-remove" type="button" aria-label="Remove file"><i data-lucide="x"></i></button>
+      </div>
+      <div>
+        <label class="label" for="deck-upload">Deck name</label>
+        <input class="field" id="deck-upload" type="text" placeholder="e.g. Lecture 3 – The Cell" autocomplete="off">
+      </div>
+      <button class="btn btn-primary btn-lg" id="generate" type="button" disabled>
+        <i data-lucide="sparkles"></i> Generate cards
+      </button>
+    </div>
+    <div class="hints">
+      <span><i data-lucide="image"></i> Keeps diagrams and photos</span>
+      <span><i data-lucide="tags"></i> One card per labeled diagram</span>
+      <span><i data-lucide="copy-x"></i> No duplicate questions</span>
+    </div>
   </section>
 
-  <div class="status" id="status" hidden><div class="spinner"></div><span id="status-text">Uploading</span></div>
-  <div class="error" id="error" hidden></div>
+  <!-- Loading -->
+  <section class="view" id="view-loading" hidden>
+    <div class="progress-card" aria-live="polite">
+      <div class="progress-top">
+        <h2>Making your cards</h2>
+        <span class="progress-pct" id="pct">0%</span>
+      </div>
+      <div class="bar" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" id="bar"><div id="bar-fill"></div></div>
+      <div class="status-line"><i data-lucide="loader-circle"></i><span id="status">Uploading…</span></div>
+    </div>
+    <div class="skeletons" aria-hidden="true">
+      <div class="sk sk-head"></div>
+      <div class="sk-card"><div class="sk-col"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div><div class="sk-col"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div></div>
+      <div class="sk-card"><div class="sk-col"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div><div class="sk-col"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div></div>
+      <div class="sk sk-head"></div>
+      <div class="sk-card"><div class="sk-col"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div><div class="sk-col"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div></div>
+    </div>
+  </section>
 
-  <section id="review" hidden>
-    <div class="toolbar">
-      <div class="summary" id="summary"></div>
-      <div class="deckname">
-        <label for="deck">Deck name</label>
-        <input id="deck" type="text">
-        <button class="primary" id="export">Export to Anki</button>
+  <!-- Review -->
+  <section class="view" id="view-review" hidden>
+    <div class="review-head">
+      <div>
+        <h1>Review your cards</h1>
+        <p id="review-sub">Edit anything before exporting.</p>
+      </div>
+      <div class="deck-field">
+        <div>
+          <label class="label" for="deck">Deck name</label>
+          <input class="field" id="deck" type="text" autocomplete="off">
+        </div>
+        <button class="btn" id="restart" type="button" style="height:44px"><i data-lucide="rotate-ccw"></i> New deck</button>
       </div>
     </div>
-    <div id="slides" style="display:grid; gap:32px; margin-top:20px"></div>
-    <details class="removed" id="removed" style="margin-top:32px" hidden>
-      <summary id="removed-title"></summary>
-      <div id="removed-list"></div>
+    <div class="stats">
+      <div class="stat"><span class="stat-icon"><i data-lucide="layers"></i></span><div><div class="stat-num" id="stat-cards">0</div><div class="stat-label">Cards made</div></div></div>
+      <div class="stat"><span class="stat-icon"><i data-lucide="presentation"></i></span><div><div class="stat-num" id="stat-slides">0</div><div class="stat-label">Slides processed</div></div></div>
+      <div class="stat"><span class="stat-icon"><i data-lucide="copy-x"></i></span><div><div class="stat-num" id="stat-dupes">0</div><div class="stat-label">Duplicates removed</div></div></div>
+    </div>
+    <div id="groups"></div>
+    <details class="dupes" id="dupes" hidden>
+      <summary><i data-lucide="copy-x"></i><span id="dupes-title"></span><i class="chev" data-lucide="chevron-down"></i></summary>
+      <div id="dupes-list"></div>
     </details>
   </section>
 </main>
 
+<button class="btn btn-primary btn-lg fab" id="export" type="button" hidden>
+  <i data-lucide="download"></i> Export to Anki
+</button>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
 <script>
 const $ = (id) => document.getElementById(id);
-let job = null;       // server job (slides, figures, deck name)
-let cards = [];       // the working, editable list
-let removed = [];     // duplicates the server dropped
+const icons = () => window.lucide && lucide.createIcons();
+
+let job = null;         // server job: id, slides, deck_name
+let cards = [];         // working, editable card list
+let removed = [];       // duplicates the server dropped
+let editing = null;     // id of the card being edited
+let pickedFile = null;
 let nextId = 0;
 
-function showError(msg) { $("error").textContent = msg; $("error").hidden = !msg; }
-function setStatus(msg) { $("status").hidden = !msg; $("status-text").textContent = msg || ""; }
-const media = (name) => `/api/jobs/${job.id}/media/${encodeURIComponent(name)}`;
+// ---------- theme
+function isDark() {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function syncThemeButton() {
+  const dark = isDark();
+  $("theme").innerHTML = `<i data-lucide="${dark ? "sun" : "moon"}"></i>`;
+  $("theme").setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+  icons();
+}
+$("theme").addEventListener("click", () => {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("theme", next); } catch (e) {}
+  syncThemeButton();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncThemeButton);
+
+// ---------- views, errors, toasts
+function show(view) {
+  for (const v of ["upload", "loading", "review"]) $("view-" + v).hidden = v !== view;
+  $("export").hidden = view !== "review";
+  window.scrollTo({ top: 0 });
+}
+function friendly(msg) {
+  if (!msg) return "";
+  if (/Failed to fetch|NetworkError|Load failed/i.test(msg))
+    return "Couldn't reach the app. Make sure the Terminal window running it is still open.";
+  if (/job no longer exists/i.test(msg)) return "The app was restarted, so this session was lost. Upload your slides again.";
+  return msg;
+}
+function showError(title, msg) {
+  $("error").hidden = !title;
+  $("error-title").textContent = title || "";
+  $("error-text").textContent = friendly(msg);
+}
+function toast(text, { icon = "check", action, onAction, duration = 4000 } = {}) {
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = `<i data-lucide="${icon}"></i><span></span>`;
+  el.querySelector("span").textContent = text;
+  let timer;
+  const close = () => { clearTimeout(timer); el.classList.add("leaving"); setTimeout(() => el.remove(), 200); };
+  if (action) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = action;
+    b.addEventListener("click", () => { onAction(); close(); });
+    el.append(b);
+  }
+  $("toasts").append(el); icons();
+  timer = setTimeout(close, duration);
+}
 
 // ---------- upload
 const drop = $("drop"), fileInput = $("file");
+const niceSize = (n) => n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
+const stem = (name) => name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+
+function pick(file) {
+  if (!file) return;
+  if (!/\.(pdf|pptx)$/i.test(file.name)) {
+    showError("That file type isn't supported", "Choose a PDF or PowerPoint (.pptx) file. Older .ppt files need to be saved as .pptx first.");
+    return;
+  }
+  showError();
+  pickedFile = file;
+  $("file-name").textContent = file.name;
+  $("file-size").textContent = niceSize(file.size);
+  $("file-row").hidden = false;
+  drop.hidden = true;
+  if (!$("deck-upload").value.trim()) $("deck-upload").value = stem(file.name);
+  $("generate").disabled = false;
+}
+function clearFile() {
+  pickedFile = null; fileInput.value = "";
+  $("file-row").hidden = true; drop.hidden = false; $("generate").disabled = true;
+}
 drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); } });
-fileInput.addEventListener("change", () => fileInput.files[0] && upload(fileInput.files[0]));
+fileInput.addEventListener("change", () => pick(fileInput.files[0]));
 ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
-drop.addEventListener("drop", (e) => e.dataTransfer.files[0] && upload(e.dataTransfer.files[0]));
+drop.addEventListener("drop", (e) => pick(e.dataTransfer.files[0]));
+$("file-remove").addEventListener("click", clearFile);
 
-async function upload(file) {
-  showError(""); $("review").hidden = true; setStatus("Uploading " + file.name);
-  const body = new FormData(); body.append("file", file);
+$("generate").addEventListener("click", async () => {
+  if (!pickedFile) return;
+  showError(); setProgress(3, "Uploading " + pickedFile.name + "…"); show("loading");
+  const body = new FormData(); body.append("file", pickedFile);
   try {
     const res = await fetch("/api/jobs", { method: "POST", body });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Upload failed.");
     poll(data.id);
-  } catch (e) { setStatus(""); showError(e.message); }
-}
+  } catch (e) { show("upload"); showError("Upload didn't work", e.message); }
+});
 
+// ---------- progress
+function setProgress(pct, text) {
+  pct = Math.max(0, Math.min(100, Math.round(pct)));
+  $("bar-fill").style.width = Math.max(4, pct) + "%";
+  $("bar").setAttribute("aria-valuenow", pct);
+  $("pct").textContent = pct + "%";
+  $("status").textContent = text;
+}
+function progressFrom(message) {
+  // The server reports "Writing cards for slides 5–8 of 30".
+  const m = /slides (\d+)\D+(\d+) of (\d+)/.exec(message || "");
+  if (m) {
+    const [from, total] = [+m[1], +m[3]];
+    return [10 + 85 * ((from - 1) / total), `Reading slides ${m[1]}–${m[2]} of ${total}…`];
+  }
+  if (/Reading/i.test(message || "")) return [6, "Reading your slides…"];
+  return [4, (message || "Working") + "…"];
+}
 async function poll(id) {
-  const res = await fetch(`/api/jobs/${id}`);
-  const data = await res.json();
-  if (!res.ok) { setStatus(""); return showError(data.detail); }
-  if (data.status === "running") { setStatus(data.message); return setTimeout(() => poll(id), 1200); }
-  setStatus("");
-  if (data.status === "error") return showError(data.message);
+  let data;
+  try {
+    const res = await fetch(`/api/jobs/${id}`);
+    data = await res.json();
+    if (!res.ok) throw new Error(data.detail);
+  } catch (e) { show("upload"); return showError("Lost track of this deck", e.message); }
+  if (data.status === "running") {
+    setProgress(...progressFrom(data.message));
+    return setTimeout(() => poll(id), 1000);
+  }
+  if (data.status === "error") { show("upload"); return showError("Couldn't make cards from this file", data.message); }
+  setProgress(100, "Done");
   job = data;
   cards = data.cards.map((c) => ({ ...c }));
   removed = data.removed.map((c) => ({ ...c }));
   nextId = cards.length + removed.length;
-  $("deck").value = data.deck_name;
+  editing = null;
+  $("deck").value = $("deck-upload").value.trim() || data.deck_name;
+  show("review");
   render();
 }
 
 // ---------- review
-function figuresFor(slideNo) {
-  const s = job.slides.find((s) => s.number === slideNo);
-  return s ? s.figures : [];
+const media = (name) => `/api/jobs/${job.id}/media/${encodeURIComponent(name)}`;
+const slug = () => ($("deck").value.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "") || "Deck");
+const figuresFor = (n) => (job.slides.find((s) => s.number === n) || {}).figures || [];
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+function iconBtn(icon, label, cls = "") {
+  const b = el("button", "btn btn-ghost icon-btn " + cls); b.type = "button";
+  b.setAttribute("aria-label", label); b.title = label; b.innerHTML = `<i data-lucide="${icon}"></i>`;
+  return b;
 }
 
-function imagePicker(card, key) {
-  const wrap = document.createElement("div"); wrap.className = "side";
-  if (card[key]) { const img = document.createElement("img"); img.className = "thumb"; img.src = media(card[key]); img.alt = ""; wrap.append(img); }
+function faceView(card, side) {
+  const face = el("div", "face");
+  const label = el("div", "face-label", side === "front" ? "Front" : "Back");
+  if (side === "front" && card.type === "diagram") {
+    const badge = el("span", "badge"); badge.innerHTML = `<i data-lucide="scan-search"></i>Diagram`; label.append(badge);
+  }
+  face.append(label);
+  const text = card[side].trim();
+  face.append(el("div", "face-text" + (text ? "" : " muted"), text || "Empty"));
+  const img = card[side + "_image"];
+  if (img) {
+    const t = el("button", "thumb"); t.type = "button"; t.setAttribute("aria-label", "View image full size");
+    const i = document.createElement("img"); i.src = media(img); i.alt = ""; i.loading = "lazy";
+    t.append(i); t.addEventListener("click", () => openLightbox(media(img)));
+    face.append(t);
+  }
+  return face;
+}
+
+function faceEdit(card, side, draft) {
+  const face = el("div", "face");
+  const id = `${card.id}-${side}`;
+  const label = el("label", "face-label", side === "front" ? "Front" : "Back"); label.htmlFor = id;
+  const ta = document.createElement("textarea"); ta.id = id; ta.value = draft[side];
+  ta.rows = Math.min(10, Math.max(3, draft[side].split("\n").length + 1));
+  ta.addEventListener("input", () => { draft[side] = ta.value; });
+  face.append(label, ta);
   const options = new Set(figuresFor(card.slide));
-  if (card[key]) options.add(card[key]);
-  if (!options.size) return wrap;
-  const sel = document.createElement("select");
-  sel.id = `${card.id}-${key}`;
-  sel.setAttribute("aria-label", key === "front_image" ? "Front image" : "Back image");
-  sel.append(new Option("No image", ""));
-  options.forEach((n) => sel.append(new Option(n.includes("_masked") ? n + " (labels hidden)" : n, n)));
-  sel.value = card[key] || "";
-  sel.addEventListener("change", () => { card[key] = sel.value || null; render(); });
-  wrap.append(sel);
-  return wrap;
+  const key = side + "_image";
+  if (draft[key]) options.add(draft[key]);
+  if (options.size) {
+    const wrap = el("div", "img-pick");
+    const sel = document.createElement("select"); sel.id = `${card.id}-${key}`;
+    sel.setAttribute("aria-label", (side === "front" ? "Front" : "Back") + " image");
+    sel.append(new Option("No image", ""));
+    const nice = (n) => n.includes("_masked") ? "Diagram, labels hidden"
+      : n.includes("_slide") ? "Whole slide"
+      : "Figure " + ((/fig(\d+)/.exec(n) || [])[1] || "");
+    options.forEach((n) => sel.append(new Option(nice(n), n)));
+    sel.value = draft[key] || "";
+    sel.addEventListener("change", () => { draft[key] = sel.value || null; });
+    wrap.append(sel); face.append(wrap);
+  }
+  return face;
 }
 
 function cardEl(card) {
-  const el = document.createElement("article");
-  el.className = "card" + (card.type === "diagram" ? " diagram" : "");
-  for (const [side, label] of [["front", "Front"], ["back", "Back"]]) {
-    const col = document.createElement("div"); col.className = "side";
-    const lab = document.createElement("label"); lab.className = "side-label"; lab.textContent = label;
-    const ta = document.createElement("textarea");
-    ta.id = `${card.id}-${side}`; lab.htmlFor = ta.id;
-    ta.value = card[side]; ta.rows = Math.max(2, card[side].split("\n").length);
-    ta.addEventListener("input", () => { card[side] = ta.value; });
-    col.append(lab, ta, imagePicker(card, side + "_image"));
-    el.append(col);
+  const box = el("article", "card");
+  if (editing === card.id) {
+    box.classList.add("editing");
+    const draft = { front: card.front, back: card.back, front_image: card.front_image, back_image: card.back_image };
+    const grid = el("div", "card-grid");
+    grid.append(faceEdit(card, "front", draft), faceEdit(card, "back", draft));
+    const foot = el("div", "edit-foot");
+    const cancel = el("button", "btn", "Cancel"); cancel.type = "button";
+    const save = el("button", "btn btn-primary"); save.type = "button"; save.innerHTML = `<i data-lucide="check"></i>Save`;
+    cancel.addEventListener("click", () => {
+      if (card.isNew && !card.front.trim() && !card.back.trim()) cards = cards.filter((c) => c !== card);
+      editing = null; render();
+    });
+    save.addEventListener("click", () => {
+      Object.assign(card, draft); delete card.isNew; editing = null; render();
+      toast("Card saved");
+    });
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") cancel.click();
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save.click();
+    });
+    foot.append(cancel, save);
+    box.append(grid, foot);
+    return box;
   }
-  const foot = document.createElement("div"); foot.className = "card-foot";
-  const pill = document.createElement("span");
-  pill.className = "pill" + (card.type === "diagram" ? " diagram" : "");
-  pill.textContent = card.type === "diagram" ? "Labeled diagram" : "Basic";
-  const del = document.createElement("button"); del.className = "link"; del.textContent = "Delete card";
-  del.addEventListener("click", () => { cards = cards.filter((c) => c !== card); render(); });
-  foot.append(pill, del);
-  el.append(foot);
-  return el;
+  const grid = el("div", "card-grid");
+  grid.append(faceView(card, "front"), faceView(card, "back"));
+  const actions = el("div", "card-actions");
+  const edit = iconBtn("pencil", "Edit card");
+  const del = iconBtn("trash-2", "Delete card", "danger");
+  edit.addEventListener("click", () => { editing = card.id; render(); focusEditor(card.id); });
+  del.addEventListener("click", () => deleteCard(card));
+  actions.append(edit, del);
+  box.append(grid, actions);
+  box.addEventListener("dblclick", (e) => { if (!e.target.closest(".thumb")) edit.click(); });
+  return box;
+}
+
+function focusEditor(id) { requestAnimationFrame(() => { const t = $(`${id}-front`); if (t) t.focus(); }); }
+
+function deleteCard(card) {
+  const index = cards.indexOf(card);
+  cards.splice(index, 1); render();
+  toast("Card deleted", { icon: "trash-2", action: "Undo", duration: 6000,
+    onAction: () => { cards.splice(Math.min(index, cards.length), 0, card); render(); } });
 }
 
 function render() {
-  $("review").hidden = false;
-  const slug = $("deck").value.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "") || "Deck";
-  const withCards = new Set(cards.map((c) => c.slide));
-  $("summary").textContent =
-    `${cards.length} card${cards.length === 1 ? "" : "s"} from ${job.slide_count} slides, ` +
-    `${removed.length} duplicate${removed.length === 1 ? "" : "s"} removed`;
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  $("stat-cards").textContent = cards.length;
+  $("stat-slides").textContent = job.slide_count;
+  $("stat-dupes").textContent = removed.length;
+  $("review-sub").textContent = `${plural(cards.length, "card")} from ${plural(job.slide_count, "slide")}. Hover a card to edit or delete it.`;
   $("export").disabled = cards.length === 0;
 
-  const host = $("slides"); host.replaceChildren();
+  const host = $("groups"); host.replaceChildren();
   for (const slide of job.slides) {
     const mine = cards.filter((c) => c.slide === slide.number).sort((a, b) => a.order - b.order);
-    const sec = document.createElement("section"); sec.className = "slide";
-    const head = document.createElement("div"); head.className = "slide-head";
-    const h = document.createElement("h2"); h.textContent = `Slide ${slide.number}`;
-    const tag = document.createElement("span"); tag.className = "tag";
-    tag.textContent = `${slug}::Slide_${String(slide.number).padStart(2, "0")}`;
-    const add = document.createElement("button"); add.textContent = "Add card";
+    const group = el("section", "group");
+    const head = el("div", "group-head");
+    head.append(el("h2", "", `Slide ${slide.number}`), el("span", "count", String(mine.length)),
+      el("span", "tag", `${slug()}::Slide_${String(slide.number).padStart(2, "0")}`));
+    const body = el("div", "group-body");
+    if (mine.length) mine.forEach((c) => body.append(cardEl(c)));
+    else {
+      const empty = el("div", "empty-row"); empty.innerHTML = `<i data-lucide="minus"></i><span>No cards for this slide</span>`;
+      body.append(empty);
+    }
+    const add = el("button", "btn btn-ghost add-btn"); add.type = "button";
+    add.innerHTML = `<i data-lucide="plus"></i>Add card`;
     add.addEventListener("click", () => {
-      const last = Math.max(-1, ...cards.map((c) => c.order));
-      cards.push({ id: "n" + nextId++, slide: slide.number, front: "", back: "", type: "basic",
-                   front_image: null, back_image: null, order: last + 1 });
-      render();
-      const t = document.getElementById(`n${nextId - 1}-front`); if (t) t.focus();
+      const order = Math.max(-1, ...cards.map((c) => c.order)) + 1;
+      const card = { id: "n" + nextId++, slide: slide.number, front: "", back: "", type: "basic",
+                     front_image: null, back_image: null, order, isNew: true };
+      cards.push(card); editing = card.id; render(); focusEditor(card.id);
     });
-    head.append(h, tag, add);
-    sec.append(head);
-    if (mine.length) mine.forEach((c) => sec.append(cardEl(c)));
-    else { const p = document.createElement("p"); p.className = "empty"; p.textContent = "No cards from this slide."; sec.append(p); }
-    host.append(sec);
+    body.append(add);
+    group.append(head, body);
+    host.append(group);
   }
 
-  $("removed").hidden = removed.length === 0;
-  $("removed-title").textContent = `${removed.length} duplicate${removed.length === 1 ? "" : "s"} removed. Review or restore`;
-  const list = $("removed-list"); list.replaceChildren();
+  $("dupes").hidden = removed.length === 0;
+  $("dupes-title").textContent = `${plural(removed.length, "duplicate")} removed`;
+  const list = $("dupes-list"); list.replaceChildren();
   for (const r of removed) {
-    const row = document.createElement("div"); row.className = "removed-row";
-    const p = document.createElement("p");
+    const row = el("div", "dupe");
+    const p = el("p", "", r.front);
     const orig = cards.find((c) => c.id === r.duplicate_of);
-    p.textContent = r.front;
-    const small = document.createElement("small");
-    small.textContent = ` Slide ${r.slide}` + (orig ? `, repeats a card on slide ${orig.slide}` : "");
-    p.append(small);
-    const btn = document.createElement("button"); btn.textContent = "Restore";
-    btn.addEventListener("click", () => { removed = removed.filter((x) => x !== r); cards.push(r); render(); });
-    row.append(p, btn); list.append(row);
+    p.append(el("small", "", `Slide ${r.slide}` + (orig ? ` · repeats a card on slide ${orig.slide}` : "")));
+    const b = el("button", "btn"); b.type = "button"; b.innerHTML = `<i data-lucide="undo-2"></i>Restore`;
+    b.addEventListener("click", () => { removed = removed.filter((x) => x !== r); cards.push(r); render(); toast("Card restored"); });
+    row.append(p, b); list.append(row);
   }
+  icons();
 }
-$("deck").addEventListener("input", () => render());
+
+$("deck").addEventListener("input", () => {
+  document.querySelectorAll(".group-head .tag").forEach((t, i) => {
+    t.textContent = `${slug()}::Slide_${String(job.slides[i].number).padStart(2, "0")}`;
+  });
+});
+
+function startOver() {
+  if (!$("view-loading").hidden) return;
+  job = null; cards = []; removed = []; editing = null;
+  clearFile(); $("deck-upload").value = ""; showError(); show("upload");
+}
+$("restart").addEventListener("click", startOver);
+$("home").addEventListener("click", startOver);
+
+// ---------- lightbox
+function openLightbox(src) {
+  const back = el("div", "lightbox"); back.setAttribute("role", "dialog"); back.setAttribute("aria-label", "Image");
+  const img = document.createElement("img"); img.src = src; img.alt = "";
+  const close = iconBtn("x", "Close", "close");
+  const done = () => { back.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") done(); };
+  back.addEventListener("click", done);
+  document.addEventListener("keydown", onKey);
+  back.append(img, close); document.body.append(back); icons(); close.focus();
+}
 
 // ---------- export
 $("export").addEventListener("click", async () => {
-  const btn = $("export"); btn.disabled = true; btn.textContent = "Building deck…"; showError("");
+  if (editing) { const c = cards.find((x) => x.id === editing); if (c && c.isNew && !c.front && !c.back) cards = cards.filter((x) => x !== c); editing = null; render(); }
+  const btn = $("export"); btn.disabled = true; btn.innerHTML = `<i data-lucide="loader-circle"></i> Building deck…`; icons();
   const deckName = $("deck").value.trim() || job.deck_name;
   const payload = cards
     .filter((c) => c.front.trim() && c.back.trim())
@@ -302,11 +738,17 @@ $("export").addEventListener("click", async () => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = deckName.replace(/[^A-Za-z0-9]+/g, "_") + ".apkg";
-    a.click();
+    document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  } catch (e) { showError(e.message); }
-  btn.disabled = false; btn.textContent = "Export to Anki";
+    toast(`Deck exported · ${payload.length} cards`, { icon: "circle-check" });
+  } catch (e) {
+    toast(friendly(e.message) || "Export didn't work. Try again.", { icon: "circle-alert", duration: 6000 });
+  }
+  btn.disabled = cards.length === 0; btn.innerHTML = `<i data-lucide="download"></i> Export to Anki`; icons();
 });
+
+syncThemeButton();
+icons();
 </script>
 </body>
 </html>
