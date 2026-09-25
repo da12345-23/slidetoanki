@@ -7,6 +7,8 @@ by the app at /store/...
 from __future__ import annotations
 
 import os
+import urllib.request
+import uuid
 from pathlib import Path
 from typing import Dict, List
 
@@ -47,7 +49,11 @@ class BlobStore:
         return result.url
 
     def get(self, path: str) -> bytes:
-        return self.client.get(path, access="public", use_cache=False).content
+        # The SDK's no-cache flag (?cache=0) is rejected by public stores, so skip
+        # the CDN copy with a unique query instead: edits must show up right away.
+        url = self.client.head(path).url
+        with urllib.request.urlopen(f"{url}?v={uuid.uuid4().hex}", timeout=30) as res:
+            return res.read()
 
     def list(self, prefix: str) -> List[Dict]:
         items = []
