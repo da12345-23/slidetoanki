@@ -499,7 +499,12 @@ $("login-form").addEventListener("submit", async (e) => {
   $("login-error").textContent = "";
   const res = await fetch("/api/login", { method: "POST", headers: { "X-Password": password } }).catch(() => null);
   if (!res) { $("login-error").textContent = "Couldn't reach the server."; return; }
-  if (!res.ok) { $("login-error").textContent = "That password isn't right."; return; }
+  if (res.status === 401) { $("login-error").textContent = "That password isn't right."; return; }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    $("login-error").textContent = data.detail || "The server had a problem. Try again in a minute.";
+    return;
+  }
   try { localStorage.setItem("password", password); } catch (e) {}
   goHome();
 });
