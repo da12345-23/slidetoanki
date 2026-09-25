@@ -1,0 +1,13 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+python-dotenv>=1.0
+anthropic>=0.125
+pymupdf>=1.24
+python-pptx>=1.0
+genanki>=0.13
+rapidfuzz>=3.0
+pillow>=10.0
+# tests
+httpx>=0.27
+pytest>=8.0

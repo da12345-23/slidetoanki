@@ -1,0 +1,7 @@
+.venv/
+.env
+data/
+tests/output/
+__pycache__/
+.pytest_cache/
+*.apkg
