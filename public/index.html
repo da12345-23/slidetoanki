@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
   // Apply a saved theme before first paint so there is no flash.
   try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
@@ -266,6 +268,38 @@
     *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
   }
 
+  /* ---------- login */
+  .login-card { max-width: 400px; margin: 40px auto 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; box-shadow: var(--shadow); padding: 28px; display: grid; gap: 16px; text-align: center; }
+  .login-card .drop-icon { margin: 0 auto; }
+  .login-card h1 { font-size: 22px; font-weight: 700; }
+  .login-card p { color: var(--text-2); font-size: 14px; }
+  .login-card form { display: grid; gap: 12px; text-align: left; }
+  .login-card .btn-lg { width: 100%; }
+  .field-error { color: var(--danger); font-size: 13px; min-height: 18px; }
+
+  /* ---------- library */
+  .library { max-width: 640px; margin: 48px auto 0; }
+  .library-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .library-head h2 { font-size: 17px; font-weight: 600; }
+  .library-head span { color: var(--text-3); font-size: 13px; }
+  .deck-list { display: grid; gap: 8px; }
+  .deck-row { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 14px 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    font: inherit; color: var(--text); cursor: pointer; transition: border-color var(--ease), box-shadow var(--ease), transform var(--ease); }
+  .deck-row:hover { border-color: var(--border-strong); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .deck-row .file-badge { width: 36px; height: 36px; }
+  .deck-row .meta { flex: 1; min-width: 0; }
+  .deck-row .title { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .deck-row .sub { font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .deck-row > svg.lucide { color: var(--text-3); }
+  .library-empty { padding: 22px; text-align: center; color: var(--text-3); font-size: 14px;
+    border: 1px dashed var(--border); border-radius: var(--radius); }
+  .sk-row { height: 66px; border-radius: var(--radius); }
+
+  .saved-note { font-size: 13px; color: var(--text-3); display: inline-flex; align-items: center; gap: 6px; }
+  .saved-note svg.lucide { width: 15px; height: 15px; }
+
   @media (max-width: 640px) {
     main { padding-block: 28px 120px; }
     .container { padding-inline: 16px; }
@@ -304,8 +338,25 @@
     <div><strong id="error-title"></strong><p id="error-text"></p></div>
   </div>
 
+  <!-- Password -->
+  <section class="view" id="view-login" hidden>
+    <div class="login-card">
+      <span class="drop-icon"><i data-lucide="lock-keyhole"></i></span>
+      <h1>Enter the password</h1>
+      <p>This Slide2Anki is shared with a group. Ask whoever sent you the link for the password.</p>
+      <form id="login-form">
+        <div>
+          <label class="label" for="password">Password</label>
+          <input class="field" id="password" type="password" autocomplete="current-password" required>
+          <div class="field-error" id="login-error"></div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">Continue</button>
+      </form>
+    </div>
+  </section>
+
   <!-- Upload -->
-  <section class="view" id="view-upload">
+  <section class="view" id="view-upload" hidden>
     <div class="hero">
       <h1>Turn slides into flashcards</h1>
       <p>Upload a lecture deck and get Anki cards in slide order, with diagrams included and repeats removed.</p>
@@ -337,6 +388,13 @@
       <span><i data-lucide="image"></i> Keeps diagrams and photos</span>
       <span><i data-lucide="tags"></i> One card per labeled diagram</span>
       <span><i data-lucide="copy-x"></i> No duplicate questions</span>
+    </div>
+    <div class="library">
+      <div class="library-head">
+        <h2>Shared library</h2>
+        <span>Decks anyone in your group has made</span>
+      </div>
+      <div class="deck-list" id="deck-list"></div>
     </div>
   </section>
 
@@ -371,7 +429,8 @@
           <label class="label" for="deck">Deck name</label>
           <input class="field" id="deck" type="text" autocomplete="off">
         </div>
-        <button class="btn" id="restart" type="button" style="height:44px"><i data-lucide="rotate-ccw"></i> New deck</button>
+        <button class="btn" id="save" type="button" style="height:44px"><i data-lucide="cloud-upload"></i> Save changes</button>
+        <button class="btn" id="restart" type="button" style="height:44px"><i data-lucide="arrow-left"></i> Library</button>
       </div>
     </div>
     <div class="stats">
@@ -396,12 +455,54 @@
 const $ = (id) => document.getElementById(id);
 const icons = () => window.lucide && lucide.createIcons();
 
-let job = null;         // server job: id, slides, deck_name
+const PIECE_SLIDES = 4;                 // slides sent to the server per request
+const MAX_PIECE_BYTES = 3.8 * 1024 * 1024; // Vercel refuses request bodies over 4.5 MB
+
+let deck = null;        // the open deck: id, name, slides, media, slide_count
 let cards = [];         // working, editable card list
 let removed = [];       // duplicates the server dropped
 let editing = null;     // id of the card being edited
+let dirty = false;      // unsaved edits
 let pickedFile = null;
 let nextId = 0;
+
+// ---------- password + API
+let password = "";
+try { password = localStorage.getItem("password") || ""; } catch (e) {}
+
+class ApiError extends Error { constructor(msg, status) { super(msg); this.status = status; } }
+
+async function api(path, { method = "GET", json, form } = {}) {
+  const headers = { "X-Password": password };
+  let body;
+  if (json) { headers["Content-Type"] = "application/json"; body = JSON.stringify(json); }
+  if (form) body = form;
+  let res;
+  try { res = await fetch(path, { method, headers, body }); }
+  catch (e) { throw new ApiError("Couldn't reach the server. Check your internet connection and try again.", 0); }
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (res.status === 401) { showLogin(); throw new ApiError("Enter the password to continue.", 401); }
+  if (res.status === 413) throw new ApiError("That piece of the file was too big to upload. Try saving the slides as a PDF.", 413);
+  if (res.status === 504) throw new ApiError("The server took too long on these slides. Try again.", 504);
+  if (!res.ok) throw new ApiError((data && data.detail) || "Something went wrong on the server. Try again.", res.status);
+  return data;
+}
+
+function showLogin() {
+  show("login");
+  setTimeout(() => $("password").focus(), 50);
+}
+$("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  password = $("password").value;
+  $("login-error").textContent = "";
+  const res = await fetch("/api/login", { method: "POST", headers: { "X-Password": password } }).catch(() => null);
+  if (!res) { $("login-error").textContent = "Couldn't reach the server."; return; }
+  if (!res.ok) { $("login-error").textContent = "That password isn't right."; return; }
+  try { localStorage.setItem("password", password); } catch (e) {}
+  goHome();
+});
 
 // ---------- theme
 function isDark() {
@@ -424,21 +525,14 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncThemeB
 
 // ---------- views, errors, toasts
 function show(view) {
-  for (const v of ["upload", "loading", "review"]) $("view-" + v).hidden = v !== view;
+  for (const v of ["login", "upload", "loading", "review"]) $("view-" + v).hidden = v !== view;
   $("export").hidden = view !== "review";
   window.scrollTo({ top: 0 });
-}
-function friendly(msg) {
-  if (!msg) return "";
-  if (/Failed to fetch|NetworkError|Load failed/i.test(msg))
-    return "Couldn't reach the app. Make sure the Terminal window running it is still open.";
-  if (/job no longer exists/i.test(msg)) return "The app was restarted, so this session was lost. Upload your slides again.";
-  return msg;
 }
 function showError(title, msg) {
   $("error").hidden = !title;
   $("error-title").textContent = title || "";
-  $("error-text").textContent = friendly(msg);
+  $("error-text").textContent = msg || "";
 }
 function toast(text, { icon = "check", action, onAction, duration = 4000 } = {}) {
   const el = document.createElement("div");
@@ -456,15 +550,80 @@ function toast(text, { icon = "check", action, onAction, duration = 4000 } = {})
   timer = setTimeout(close, duration);
 }
 
+// ---------- library
+const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+function ago(seconds) {
+  const s = Date.now() / 1000 - seconds;
+  if (s < 60) return "just now";
+  if (s < 3600) return plural(Math.floor(s / 60), "minute") + " ago";
+  if (s < 86400) return plural(Math.floor(s / 3600), "hour") + " ago";
+  if (s < 86400 * 30) return plural(Math.floor(s / 86400), "day") + " ago";
+  return new Date(seconds * 1000).toLocaleDateString();
+}
+async function loadLibrary() {
+  const list = $("deck-list");
+  list.innerHTML = `<div class="sk sk-row"></div><div class="sk sk-row"></div>`;
+  let decks;
+  try { decks = await api("/api/decks"); }
+  catch (e) { if (e.status !== 401) list.innerHTML = `<div class="library-empty">Couldn't load the library. Refresh to try again.</div>`; return; }
+  list.replaceChildren();
+  if (!decks.length) {
+    list.innerHTML = `<div class="library-empty">No decks yet. The first deck anyone makes will show up here for everyone.</div>`;
+    return;
+  }
+  for (const d of decks) {
+    const row = el("button", "deck-row"); row.type = "button";
+    row.innerHTML = `<span class="file-badge"><i data-lucide="layers"></i></span><div class="meta"><div class="title"></div><div class="sub"></div></div><i data-lucide="chevron-right"></i>`;
+    row.querySelector(".title").textContent = d.name;
+    row.querySelector(".sub").textContent = `${plural(d.card_count, "card")} · ${plural(d.slide_count, "slide")} · updated ${ago(d.updated)}`;
+    row.addEventListener("click", () => openDeck(d.id));
+    list.append(row);
+  }
+  icons();
+}
+async function openDeck(id) {
+  showError();
+  try { loadDeck(await api(`/api/decks/${id}`)); }
+  catch (e) { if (e.status !== 401) showError("Couldn't open that deck", e.message); }
+}
+function loadDeck(data) {
+  deck = data;
+  cards = data.cards.map((c) => ({ ...c }));
+  removed = data.removed.map((c) => ({ ...c }));
+  nextId = cards.length + removed.length;
+  editing = null; dirty = false;
+  $("deck").value = data.name;
+  show("review");
+  render();
+}
+function goHome() {
+  if (!$("view-loading").hidden) return;
+  if (dirty) {
+    toast("You have unsaved changes", { icon: "circle-alert", action: "Leave anyway", duration: 6000,
+      onAction: () => { dirty = false; goHome(); } });
+    return;
+  }
+  deck = null; cards = []; removed = []; editing = null; dirty = false;
+  clearFile(); $("deck-upload").value = ""; showError(); show("upload");
+  loadLibrary();
+}
+$("restart").addEventListener("click", goHome);
+$("home").addEventListener("click", goHome);
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
 // ---------- upload
 const drop = $("drop"), fileInput = $("file");
 const niceSize = (n) => n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
-const stem = (name) => name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+const stem = (name) => name.replace(/\.[^.]+$/, "").replace(/_+/g, " ").replace(/\s+-\s+/g, " – ").replace(/\s+/g, " ").trim();
 
 function pick(file) {
   if (!file) return;
   if (!/\.(pdf|pptx)$/i.test(file.name)) {
     showError("That file type isn't supported", "Choose a PDF or PowerPoint (.pptx) file. Older .ppt files need to be saved as .pptx first.");
+    return;
+  }
+  if (/\.pptx$/i.test(file.name) && file.size > MAX_PIECE_BYTES) {
+    showError("This PowerPoint is too big to upload", "Save it as a PDF (File → Export → PDF) and upload the PDF instead. Big PDFs work fine.");
     return;
   }
   showError();
@@ -487,16 +646,87 @@ fileInput.addEventListener("change", () => pick(fileInput.files[0]));
 drop.addEventListener("drop", (e) => pick(e.dataTransfer.files[0]));
 $("file-remove").addEventListener("click", clearFile);
 
+// Cut the deck into pieces the server can take one request at a time.
+async function* pieces(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (/\.pptx$/i.test(file.name)) {
+    const zip = await JSZip.loadAsync(bytes);
+    const total = Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n)).length;
+    yield { total };
+    for (let first = 1; first <= total; first += PIECE_SLIDES)
+      yield { blob: file, name: file.name, first, last: Math.min(total, first + PIECE_SLIDES - 1) };
+    return;
+  }
+  const src = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+  const total = src.getPageCount();
+  yield { total };
+  let first = 1;
+  while (first <= total) {
+    let count = Math.min(PIECE_SLIDES, total - first + 1);
+    for (;;) {
+      const out = await PDFLib.PDFDocument.create();
+      const idx = Array.from({ length: count }, (_, i) => first - 1 + i);
+      (await out.copyPages(src, idx)).forEach((p) => out.addPage(p));
+      const blob = new Blob([await out.save()], { type: "application/pdf" });
+      if (blob.size <= MAX_PIECE_BYTES || count === 1) {
+        if (blob.size > MAX_PIECE_BYTES)
+          throw new ApiError(`Slide ${first} is too large to upload (${niceSize(blob.size)}). Try compressing the PDF.`, 413);
+        yield { blob, name: "piece.pdf", first, last: first + count - 1 };
+        break;
+      }
+      count = Math.ceil(count / 2);
+    }
+    first += count;
+  }
+}
+
+function repeatedSoFar(counts, seen) {
+  if (seen < 3) return [];
+  return Object.keys(counts).filter((h) => counts[h] / seen >= 0.5);
+}
+
 $("generate").addEventListener("click", async () => {
   if (!pickedFile) return;
-  showError(); setProgress(3, "Uploading " + pickedFile.name + "…"); show("loading");
-  const body = new FormData(); body.append("file", pickedFile);
+  const file = pickedFile;
+  const name = $("deck-upload").value.trim() || stem(file.name);
+  showError(); setProgress(2, "Opening " + file.name + "…"); show("loading");
   try {
-    const res = await fetch("/api/jobs", { method: "POST", body });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Upload failed.");
-    poll(data.id);
-  } catch (e) { show("upload"); showError("Upload didn't work", e.message); }
+    const gen = pieces(file);
+    const { total } = (await gen.next()).value;
+    const { id } = await api("/api/decks", { method: "POST", json: { name, filename: file.name, slide_count: total } });
+    const slides = [], media = {}, found = [], hashCounts = {};
+    let order = 0;
+    for await (const piece of gen) {
+      setProgress(5 + 88 * ((piece.first - 1) / total),
+        piece.first === piece.last ? `Reading slide ${piece.first} of ${total}…` : `Reading slides ${piece.first}–${piece.last} of ${total}…`);
+      const send = async () => {
+        const form = new FormData();
+        form.append("file", piece.blob, piece.name);
+        form.append("first_slide", piece.first);
+        form.append("last_slide", piece.last);
+        form.append("existing", JSON.stringify(found.map((c) => c.front)));
+        form.append("known_repeated", JSON.stringify(repeatedSoFar(hashCounts, piece.first - 1)));
+        return api(`/api/decks/${id}/batch`, { method: "POST", form });
+      };
+      let result;
+      try { result = await send(); }
+      catch (e) { if (e.status === 401 || e.status === 400 || e.status === 413) throw e; result = await send(); } // one retry
+      slides.push(...result.slides);
+      Object.assign(media, result.media);
+      for (const [h, n] of Object.entries(result.hash_counts)) hashCounts[h] = (hashCounts[h] || 0) + n;
+      for (const c of result.cards) found.push({ ...c, order: order++ });
+    }
+    setProgress(96, "Removing duplicates and saving to the library…");
+    const saved = await api(`/api/decks/${id}/finish`, { method: "POST", json: { slides, media, cards: found } });
+    setProgress(100, "Done");
+    loadDeck(saved);
+    toast("Saved to the shared library", { icon: "cloud-check" });
+  } catch (e) {
+    if (e.status === 401) return;
+    show("upload");
+    showError("Couldn't make cards from this file", e.message || "Something went wrong. Try again.");
+    loadLibrary();
+  }
 });
 
 // ---------- progress
@@ -507,48 +737,23 @@ function setProgress(pct, text) {
   $("pct").textContent = pct + "%";
   $("status").textContent = text;
 }
-function progressFrom(message) {
-  // The server reports "Writing cards for slides 5–8 of 30".
-  const m = /slides (\d+)\D+(\d+) of (\d+)/.exec(message || "");
-  if (m) {
-    const [from, total] = [+m[1], +m[3]];
-    return [10 + 85 * ((from - 1) / total), `Reading slides ${m[1]}–${m[2]} of ${total}…`];
-  }
-  if (/Reading/i.test(message || "")) return [6, "Reading your slides…"];
-  return [4, (message || "Working") + "…"];
-}
-async function poll(id) {
-  let data;
-  try {
-    const res = await fetch(`/api/jobs/${id}`);
-    data = await res.json();
-    if (!res.ok) throw new Error(data.detail);
-  } catch (e) { show("upload"); return showError("Lost track of this deck", e.message); }
-  if (data.status === "running") {
-    setProgress(...progressFrom(data.message));
-    return setTimeout(() => poll(id), 1000);
-  }
-  if (data.status === "error") { show("upload"); return showError("Couldn't make cards from this file", data.message); }
-  setProgress(100, "Done");
-  job = data;
-  cards = data.cards.map((c) => ({ ...c }));
-  removed = data.removed.map((c) => ({ ...c }));
-  nextId = cards.length + removed.length;
-  editing = null;
-  $("deck").value = $("deck-upload").value.trim() || data.deck_name;
-  show("review");
-  render();
-}
 
 // ---------- review
-const media = (name) => `/api/jobs/${job.id}/media/${encodeURIComponent(name)}`;
+const media = (name) => (deck.media || {})[name] || "";
 const slug = () => ($("deck").value.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "") || "Deck");
-const figuresFor = (n) => (job.slides.find((s) => s.number === n) || {}).figures || [];
+const figuresFor = (n) => (deck.slides.find((s) => s.number === n) || {}).figures || [];
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 function iconBtn(icon, label, cls = "") {
   const b = el("button", "btn btn-ghost icon-btn " + cls); b.type = "button";
   b.setAttribute("aria-label", label); b.title = label; b.innerHTML = `<i data-lucide="${icon}"></i>`;
   return b;
+}
+function markDirty() { dirty = true; syncSave(); }
+function syncSave() {
+  const b = $("save");
+  b.disabled = !dirty;
+  b.innerHTML = dirty ? `<i data-lucide="cloud-upload"></i> Save changes` : `<i data-lucide="cloud-check"></i> Saved`;
+  icons();
 }
 
 function faceView(card, side) {
@@ -561,7 +766,7 @@ function faceView(card, side) {
   const text = card[side].trim();
   face.append(el("div", "face-text" + (text ? "" : " muted"), text || "Empty"));
   const img = card[side + "_image"];
-  if (img) {
+  if (img && media(img)) {
     const t = el("button", "thumb"); t.type = "button"; t.setAttribute("aria-label", "View image full size");
     const i = document.createElement("img"); i.src = media(img); i.alt = ""; i.loading = "lazy";
     t.append(i); t.addEventListener("click", () => openLightbox(media(img)));
@@ -606,14 +811,13 @@ function cardEl(card) {
     grid.append(faceEdit(card, "front", draft), faceEdit(card, "back", draft));
     const foot = el("div", "edit-foot");
     const cancel = el("button", "btn", "Cancel"); cancel.type = "button";
-    const save = el("button", "btn btn-primary"); save.type = "button"; save.innerHTML = `<i data-lucide="check"></i>Save`;
+    const save = el("button", "btn btn-primary"); save.type = "button"; save.innerHTML = `<i data-lucide="check"></i>Done`;
     cancel.addEventListener("click", () => {
       if (card.isNew && !card.front.trim() && !card.back.trim()) cards = cards.filter((c) => c !== card);
       editing = null; render();
     });
     save.addEventListener("click", () => {
-      Object.assign(card, draft); delete card.isNew; editing = null; render();
-      toast("Card saved");
+      Object.assign(card, draft); delete card.isNew; editing = null; markDirty(); render();
     });
     box.addEventListener("keydown", (e) => {
       if (e.key === "Escape") cancel.click();
@@ -640,21 +844,21 @@ function focusEditor(id) { requestAnimationFrame(() => { const t = $(`${id}-fron
 
 function deleteCard(card) {
   const index = cards.indexOf(card);
-  cards.splice(index, 1); render();
+  cards.splice(index, 1); markDirty(); render();
   toast("Card deleted", { icon: "trash-2", action: "Undo", duration: 6000,
     onAction: () => { cards.splice(Math.min(index, cards.length), 0, card); render(); } });
 }
 
 function render() {
-  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
   $("stat-cards").textContent = cards.length;
-  $("stat-slides").textContent = job.slide_count;
+  $("stat-slides").textContent = deck.slide_count;
   $("stat-dupes").textContent = removed.length;
-  $("review-sub").textContent = `${plural(cards.length, "card")} from ${plural(job.slide_count, "slide")}. Hover a card to edit or delete it.`;
+  $("review-sub").textContent = `${plural(cards.length, "card")} from ${plural(deck.slide_count, "slide")}. Changes you save are shared with your group.`;
   $("export").disabled = cards.length === 0;
+  syncSave();
 
   const host = $("groups"); host.replaceChildren();
-  for (const slide of job.slides) {
+  for (const slide of deck.slides) {
     const mine = cards.filter((c) => c.slide === slide.number).sort((a, b) => a.order - b.order);
     const group = el("section", "group");
     const head = el("div", "group-head");
@@ -688,25 +892,33 @@ function render() {
     const orig = cards.find((c) => c.id === r.duplicate_of);
     p.append(el("small", "", `Slide ${r.slide}` + (orig ? ` · repeats a card on slide ${orig.slide}` : "")));
     const b = el("button", "btn"); b.type = "button"; b.innerHTML = `<i data-lucide="undo-2"></i>Restore`;
-    b.addEventListener("click", () => { removed = removed.filter((x) => x !== r); cards.push(r); render(); toast("Card restored"); });
+    b.addEventListener("click", () => { removed = removed.filter((x) => x !== r); cards.push(r); markDirty(); render(); toast("Card restored"); });
     row.append(p, b); list.append(row);
   }
   icons();
 }
 
 $("deck").addEventListener("input", () => {
+  markDirty();
   document.querySelectorAll(".group-head .tag").forEach((t, i) => {
-    t.textContent = `${slug()}::Slide_${String(job.slides[i].number).padStart(2, "0")}`;
+    t.textContent = `${slug()}::Slide_${String(deck.slides[i].number).padStart(2, "0")}`;
   });
 });
 
-function startOver() {
-  if (!$("view-loading").hidden) return;
-  job = null; cards = []; removed = []; editing = null;
-  clearFile(); $("deck-upload").value = ""; showError(); show("upload");
-}
-$("restart").addEventListener("click", startOver);
-$("home").addEventListener("click", startOver);
+const cleanCards = (list) => list
+  .filter((c) => c.front.trim() && c.back.trim())
+  .map(({ id, slide, front, back, type, front_image, back_image, order, duplicate_of }) =>
+    ({ id, slide, front, back, type, front_image, back_image, order, duplicate_of }));
+
+$("save").addEventListener("click", async () => {
+  const b = $("save"); b.disabled = true; b.innerHTML = `<i data-lucide="loader-circle"></i> Saving…`; icons();
+  try {
+    await api(`/api/decks/${deck.id}`, { method: "PUT",
+      json: { name: $("deck").value.trim() || deck.name, cards: cleanCards(cards), removed: cleanCards(removed) } });
+    dirty = false; toast("Changes saved for everyone", { icon: "cloud-check" });
+  } catch (e) { if (e.status !== 401) toast(e.message, { icon: "circle-alert", duration: 6000 }); }
+  syncSave();
+});
 
 // ---------- lightbox
 function openLightbox(src) {
@@ -724,31 +936,28 @@ function openLightbox(src) {
 $("export").addEventListener("click", async () => {
   if (editing) { const c = cards.find((x) => x.id === editing); if (c && c.isNew && !c.front && !c.back) cards = cards.filter((x) => x !== c); editing = null; render(); }
   const btn = $("export"); btn.disabled = true; btn.innerHTML = `<i data-lucide="loader-circle"></i> Building deck…`; icons();
-  const deckName = $("deck").value.trim() || job.deck_name;
-  const payload = cards
-    .filter((c) => c.front.trim() && c.back.trim())
-    .map(({ slide, front, back, type, front_image, back_image, order }) => ({ slide, front, back, type, front_image, back_image, order }));
+  const deckName = $("deck").value.trim() || deck.name;
+  const payload = cleanCards(cards);
   try {
-    const res = await fetch(`/api/jobs/${job.id}/export`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deck_name: deckName, cards: payload }),
-    });
-    if (!res.ok) throw new Error((await res.json()).detail || "Export failed.");
-    const blob = await res.blob();
+    const { url, filename } = await api(`/api/decks/${deck.id}/export`, { method: "POST", json: { deck_name: deckName, cards: payload } });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = deckName.replace(/[^A-Za-z0-9]+/g, "_") + ".apkg";
+    a.href = url; a.download = filename; a.rel = "noopener";
     document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     toast(`Deck exported · ${payload.length} cards`, { icon: "circle-check" });
   } catch (e) {
-    toast(friendly(e.message) || "Export didn't work. Try again.", { icon: "circle-alert", duration: 6000 });
+    if (e.status !== 401) toast(e.message || "Export didn't work. Try again.", { icon: "circle-alert", duration: 6000 });
   }
   btn.disabled = cards.length === 0; btn.innerHTML = `<i data-lucide="download"></i> Export to Anki`; icons();
 });
 
+// ---------- start
 syncThemeButton();
 icons();
+(async () => {
+  const cfg = await fetch("/api/config").then((r) => r.json()).catch(() => ({}));
+  if (cfg.password_required && !password) return showLogin();
+  goHome();
+})();
 </script>
 </body>
 </html>

@@ -6,7 +6,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Sequence
 
 import anthropic
 
@@ -38,7 +38,9 @@ def generate_cards(
     slides: List[Slide],
     media_dir: Path,
     on_progress: Callable[[str], None] = lambda msg: None,
+    existing: Sequence[str] = (),
 ) -> List[Dict]:
+    """`existing` holds questions already written for earlier slides of the deck."""
     use_mock = not os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("SLIDE2ANKI_MOCK") == "1"
     client = None if use_mock else anthropic.Anthropic()
 
@@ -46,11 +48,11 @@ def generate_cards(
     for start in range(0, len(slides), BATCH_SIZE):
         batch = slides[start:start + BATCH_SIZE]
         on_progress(f"Writing cards for slides {batch[0].number}–{batch[-1].number} of {len(slides)}")
-        existing = [c["front"] for c in cards]
+        covered = list(existing) + [c["front"] for c in cards]
         if use_mock:
             raw = _mock_cards(batch)
         else:
-            raw = _ask_claude(client, batch, existing, media_dir)
+            raw = _ask_claude(client, batch, covered, media_dir)
         cards.extend(_validate(raw, batch))
     return cards
 

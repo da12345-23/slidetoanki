@@ -12,7 +12,7 @@ import io
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import fitz  # PyMuPDF
 from PIL import Image
@@ -47,13 +47,27 @@ class Slide:
         return [f.name for f in self.figures]
 
 
-def parse_deck(path: Path, media_dir: Path) -> List[Slide]:
+def parse_deck(
+    path: Path,
+    media_dir: Path,
+    first_number: int = 1,
+    pages: Optional[range] = None,
+    known_repeated: Iterable[str] = (),
+) -> Tuple[List[Slide], Dict[str, int]]:
+    """Parse a deck, or one piece of it.
+
+    `first_number` is the real slide number of the file's first page (for a PDF
+    piece cut from a bigger deck). `pages` picks 1-based slides out of a PPTX.
+    `known_repeated` holds image hashes already known to be decoration.
+    Returns the slides and, for each image hash, how many slides it was on.
+    """
     media_dir.mkdir(parents=True, exist_ok=True)
     suffix = path.suffix.lower()
+    known = set(known_repeated)
     if suffix == ".pdf":
-        return _parse_pdf(path, media_dir)
+        return _parse_pdf(path, media_dir, first_number, known)
     if suffix == ".pptx":
-        return _parse_pptx(path, media_dir)
+        return _parse_pptx(path, media_dir, pages, known)
     raise ValueError("Upload a .pdf or .pptx file.")
 
 
@@ -68,11 +82,14 @@ def _save_png(img: Image.Image, dest: Path) -> Image.Image:
     return img
 
 
-def _repeated_hashes(per_slide_hashes: List[set], n_slides: int) -> set:
+def _hash_counts(per_slide_hashes: List[set]) -> Dict[str, int]:
+    return dict(Counter(h for hashes in per_slide_hashes for h in hashes))
+
+
+def _repeated_hashes(counts: Dict[str, int], n_slides: int) -> set:
     """Hashes that show up on most slides are logos/backgrounds."""
     if n_slides < 3:
         return set()
-    counts = Counter(h for hashes in per_slide_hashes for h in hashes)
     return {h for h, c in counts.items() if c / n_slides >= REPEAT_FRACTION}
 
 
@@ -83,7 +100,7 @@ def _is_label(text: str) -> bool:
 
 # ---------------------------------------------------------------- PDF
 
-def _parse_pdf(path: Path, media_dir: Path) -> List[Slide]:
+def _parse_pdf(path: Path, media_dir: Path, first_number: int, known: set):
     doc = fitz.open(path)
 
     # First pass: hash every embedded image per page so repeats can be spotted.
@@ -97,11 +114,12 @@ def _parse_pdf(path: Path, media_dir: Path) -> List[Slide]:
                 continue
             hashes.add(hashlib.sha1(data).hexdigest())
         per_page_hashes.append(hashes)
-    repeated = _repeated_hashes(per_page_hashes, len(doc))
+    counts = _hash_counts(per_page_hashes)
+    repeated = _repeated_hashes(counts, len(doc)) | known
 
     slides = []
     for index, page in enumerate(doc):
-        number = index + 1
+        number = first_number + index
         page_area = page.rect.width * page.rect.height
         spans = _text_spans(page)
         slide = Slide(number=number, text=page.get_text("text").strip())
@@ -137,7 +155,7 @@ def _parse_pdf(path: Path, media_dir: Path) -> List[Slide]:
             slide.figures.append(Figure(name=name, width=img.width, height=img.height))
 
         slides.append(slide)
-    return slides
+    return slides, counts
 
 
 def _text_spans(page):
@@ -199,7 +217,7 @@ def _pdf_figure(page, rect, spans, number, k, media_dir) -> Figure:
 
 # ---------------------------------------------------------------- PPTX
 
-def _parse_pptx(path: Path, media_dir: Path) -> List[Slide]:
+def _parse_pptx(path: Path, media_dir: Path, pages: Optional[range], known: set):
     from pptx import Presentation
     from pptx.enum.shapes import MSO_SHAPE_TYPE
 
@@ -217,8 +235,12 @@ def _parse_pptx(path: Path, media_dir: Path) -> List[Slide]:
     def ordered(shapes):
         return sorted(walk(shapes), key=lambda s: ((s.top or 0), (s.left or 0)))
 
+    all_slides = list(prs.slides)
+    wanted = pages or range(1, len(all_slides) + 1)
+    chosen = [(n, all_slides[n - 1]) for n in wanted if 1 <= n <= len(all_slides)]
+
     per_slide_hashes = []
-    for s in prs.slides:
+    for _, s in chosen:
         hashes = set()
         for shape in walk(s.shapes):
             if hasattr(shape, "image"):
@@ -227,11 +249,11 @@ def _parse_pptx(path: Path, media_dir: Path) -> List[Slide]:
                 except Exception:
                     pass
         per_slide_hashes.append(hashes)
-    repeated = _repeated_hashes(per_slide_hashes, len(prs.slides))
+    counts = _hash_counts(per_slide_hashes)
+    repeated = _repeated_hashes(counts, len(chosen)) | known
 
     slides = []
-    for index, s in enumerate(prs.slides):
-        number = index + 1
+    for number, s in chosen:
         lines, figures, seen = [], [], set()
         for shape in ordered(s.shapes):
             if shape.has_text_frame and shape.text_frame.text.strip():
@@ -267,4 +289,4 @@ def _parse_pptx(path: Path, media_dir: Path) -> List[Slide]:
             if notes:
                 lines.append("Speaker notes: " + notes)
         slides.append(Slide(number=number, text="\n".join(lines), figures=figures))
-    return slides
+    return slides, counts
